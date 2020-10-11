@@ -46,10 +46,25 @@ public class ImageController {
     //Here a list of tags is added in the Model type object
     //this list is then sent to 'images/image.html' file and the tags are displayed
     @RequestMapping("/images/{imageId}/{title}")
-    public String showImage(@PathVariable("imageId") Integer imageId, @PathVariable("title") String title, Model model) {
+    public String showImage(@PathVariable("imageId") Integer imageId, @PathVariable("title") String title,
+                            Model model, HttpSession session) {
+        User loggedUser;
+        String editError = "Only the owner of the image can edit the image";
+        String deleteError = "Only the owner of the image can delete the image";
+
         Image image = imageService.getImage(imageId);
         model.addAttribute("image", image);
         model.addAttribute("tags", image.getTags());
+        //Check if the user logged in is same as the one who uploaded the image
+        //Allow edit or delete of the image only if they are the same
+        loggedUser = (User) session.getAttribute("loggeduser");
+
+        if (loggedUser.getUsername().equals(image.getUser().getUsername()) == false) {
+            //Logged in user different from the one who uploaded the image
+            //Do not all them to either edit or delete the image
+            model.addAttribute("editError", editError);
+            model.addAttribute("deleteError", deleteError);
+        }
         return "images/image";
     }
 
