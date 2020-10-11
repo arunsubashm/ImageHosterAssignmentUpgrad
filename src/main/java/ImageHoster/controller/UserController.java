@@ -29,18 +29,39 @@ public class UserController {
     //Sets the user profile with UserProfile type object
     //Adds User type object to a model and returns 'users/registration.html' file
     @RequestMapping("users/registration")
-    public String registration(Model model) {
+    public String registration(Model model, HttpSession session) {
         User user = new User();
         UserProfile profile = new UserProfile();
         user.setProfile(profile);
         model.addAttribute("User", user);
+
+        //Check if the password format was incorrect and hence we are re-directed to registration page
+        //If yes set the error string to the model attribute.
+        //Clear the session attribute to make sure new registrations doesnt show up this error by default
+
+        String passwordErr = (String) session.getAttribute("passwordTypeError");
+        if (passwordErr != null) {
+            model.addAttribute("passwordTypeError", passwordErr);
+            session.removeAttribute("passwordTypeError");
+        }
         return "users/registration";
     }
 
     //This controller method is called when the request pattern is of type 'users/registration' and also the incoming request is of POST type
     //This method calls the business logic and after the user record is persisted in the database, directs to login page
     @RequestMapping(value = "users/registration", method = RequestMethod.POST)
-    public String registerUser(User user) {
+    public String registerUser(User user, HttpSession session) {
+        String passwordTypeError = "Password must contain at least 1 alphabet, 1 number & 1 special character";
+
+        //Check if the password matches the required Criteria
+        if (userService.checkPassword(user) == false) {
+            //Password entered doesnt match the criteria, set the session attribute
+            //and return back to registration page where the session attribute will be used
+            //to set the model attribute to display the password not meeting requirmeents error
+            session.setAttribute("passwordTypeError", passwordTypeError);
+            return "redirect:/users/registration";
+        }
+
         userService.registerUser(user);
         return "redirect:/users/login";
     }

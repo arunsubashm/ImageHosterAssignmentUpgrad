@@ -32,4 +32,30 @@ public class UserService {
         }
     }
 
+    public boolean checkPassword(User user) {
+        //Must contain at least 1 alphabet (a-z or A-Z), 1 number (0-9) and
+        // 1 special character (any character other than a-z, A-Z and 0-9)
+
+        String password = user.getPassword();
+        int digitC = 0, charC = 0, miscC = 0;
+        char ch;
+
+        for (int i = 0; i < password.length(); i++) {
+            ch = password.charAt(i);
+            if (Character.isLetter(ch)) {
+                charC++;
+            } else if (Character.isDigit(ch)) {
+                digitC++;
+            } else {
+                miscC++;
+            }
+        }
+        if ((charC >= 1) && (digitC >= 1) && (miscC >= 1)) {
+            //Criteria met, return true
+            return true;
+        } else {
+            return false;
+        }
+    }
+
 }
