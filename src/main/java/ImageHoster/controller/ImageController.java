@@ -107,9 +107,15 @@ public class ImageController {
     //The method first needs to convert the list of all the tags to a string containing all the tags separated by a comma and then add this string in a Model type object
     //This string is then displayed by 'edit.html' file as previous tags of an image
     @RequestMapping(value = "/editImage")
-    public String editImage(@RequestParam("imageId") Integer imageId, Model model) {
+    public String editImage(@RequestParam("imageId") Integer imageId, Model model, HttpSession session) {
+        User loggedUser;
         Image image = imageService.getImage(imageId);
 
+        // Additional protection. If someone attempts to edit inspite of the warning, do not allow
+        loggedUser = (User) session.getAttribute("loggeduser");
+        if (loggedUser.getUsername().equals(image.getUser().getUsername()) == false) {
+            return "redirect:/images/" + image.getId() + "/" + image.getTitle();
+        }
         String tags = convertTagsToString(image.getTags());
         model.addAttribute("image", image);
         model.addAttribute("tags", tags);
@@ -155,7 +161,15 @@ public class ImageController {
     //The method calls the deleteImage() method in the business logic passing the id of the image to be deleted
     //Looks for a controller method with request mapping of type '/images'
     @RequestMapping(value = "/deleteImage", method = RequestMethod.DELETE)
-    public String deleteImageSubmit(@RequestParam(name = "imageId") Integer imageId) {
+    public String deleteImageSubmit(@RequestParam(name = "imageId") Integer imageId, HttpSession session) {
+        User loggedUser;
+        Image image = imageService.getImage(imageId);
+
+        // Additional protection. If someone attempts to delete inspite of the warning, do not allow
+        loggedUser = (User) session.getAttribute("loggeduser");
+        if (loggedUser.getUsername().equals(image.getUser().getUsername()) == false) {
+            return "redirect:/images/" + image.getId() + "/" + image.getTitle();
+        }
         imageService.deleteImage(imageId);
         return "redirect:/images";
     }
