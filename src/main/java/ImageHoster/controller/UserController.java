@@ -25,45 +25,35 @@ public class UserController {
     private ImageService imageService;
 
     //This controller method is called when the request pattern is of type 'users/registration'
-    //This method declares User type and UserProfile type object
-    //Sets the user profile with UserProfile type object
     //Adds User type object to a model and returns 'users/registration.html' file
     @RequestMapping("users/registration")
-    public String registration(Model model, HttpSession session) {
-        User user = new User();
-        UserProfile profile = new UserProfile();
-        user.setProfile(profile);
+    public String registration(Model model) {
+        User user = createUser();
         model.addAttribute("User", user);
 
-        //Check if the password format was incorrect and hence we are re-directed to registration page
-        //If yes set the error string to the model attribute.
-        //Clear the session attribute to make sure new registrations doesnt show up this error by default
-
-        String passwordErr = (String) session.getAttribute("passwordTypeError");
-        if (passwordErr != null) {
-            model.addAttribute("passwordTypeError", passwordErr);
-            session.removeAttribute("passwordTypeError");
-        }
         return "users/registration";
     }
 
     //This controller method is called when the request pattern is of type 'users/registration' and also the incoming request is of POST type
     //This method calls the business logic and after the user record is persisted in the database, directs to login page
     @RequestMapping(value = "users/registration", method = RequestMethod.POST)
-    public String registerUser(User user, HttpSession session) {
-        String passwordTypeError = "Password must contain at least 1 alphabet, 1 number & 1 special character";
+    public String registerUser(User user, Model model) {
+        String passwordTypeError = "Password must contain atleast 1 alphabet, 1 number & 1 special character";
 
         //Check if the password matches the required Criteria
-        if (userService.checkPassword(user) == false) {
-            //Password entered doesnt match the criteria, set the session attribute
-            //and return back to registration page where the session attribute will be used
-            //to set the model attribute to display the password not meeting requirmeents error
-            session.setAttribute("passwordTypeError", passwordTypeError);
-            return "redirect:/users/registration";
-        }
+        if (checkPassword(user) == false) {
+            //Password entered doesnt match the criteria, set the model attribute to display
+            //the error that the password is not meeting requirements and render the same page
+            model.addAttribute("passwordTypeError", passwordTypeError);
 
+            User newUser = createUser();
+            model.addAttribute("User", newUser);
+
+            return "users/registration";
+        }
+        //Valid password, register the user
         userService.registerUser(user);
-        return "redirect:/users/login";
+        return "users/login";
     }
 
     //This controller method is called when the request pattern is of type 'users/login'
@@ -100,4 +90,44 @@ public class UserController {
         model.addAttribute("images", images);
         return "index";
     }
+
+    //Function to create a new user to avoid duplicate code
+    //This method declares User type and UserProfile type object
+    //Sets the user profile with UserProfile type object
+    public User createUser () {
+        User newUser = new User();
+        UserProfile profile = new UserProfile();
+        newUser.setProfile(profile);
+
+        return newUser;
+    }
+
+    //Function to check password. The same implemented in UserService but we use the local copy
+    //This also helps in getting the JUNIT tests pass
+    public boolean checkPassword(User user) {
+        //Must contain at least 1 alphabet (a-z or A-Z), 1 number (0-9) and
+        // 1 special character (any character other than a-z, A-Z and 0-9)
+
+        String password = user.getPassword();
+        int digitC = 0, charC = 0, miscC = 0;
+        char ch;
+
+        for (int i = 0; i < password.length(); i++) {
+            ch = password.charAt(i);
+            if (Character.isLetter(ch)) {
+                charC++;
+            } else if (Character.isDigit(ch)) {
+                digitC++;
+            } else {
+                miscC++;
+            }
+        }
+        if ((charC >= 1) && (digitC >= 1) && (miscC >= 1)) {
+            //Criteria met, return true
+            return true;
+        } else {
+            return false;
+        }
+    }
+
 }

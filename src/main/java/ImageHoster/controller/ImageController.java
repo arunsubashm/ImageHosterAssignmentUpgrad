@@ -41,10 +41,6 @@ public class ImageController {
     }
 
     //This method is called when the details of the specific image with corresponding title are to be displayed
-    //The logic is to get the image from the databse with corresponding title. After getting the image from the database the details are shown
-    //First receive the dynamic parameter in the incoming request URL in a string variable 'title' and also the Model type object
-    //Call the getImageByTitle() method in the business logic to fetch all the details of that image
-    //Add the image in the Model type object with 'image' as the key
     //Return 'images/image.html' file
 
     //Also now you need to add the tags of an image in the Model type object
@@ -53,26 +49,8 @@ public class ImageController {
     @RequestMapping("/images/{imageId}/{title}")
     public String showImage(@PathVariable("imageId") Integer imageId, @PathVariable("title") String title,
                             Model model, HttpSession session) {
-        User loggedUser;
-        String editError = "Only the owner of the image can edit the image";
-        String deleteError = "Only the owner of the image can delete the image";
-
-        Image image = imageService.getImage(imageId);
-        model.addAttribute("image", image);
-        model.addAttribute("tags", image.getTags());
-        //Display all the comments for the Image
-        model.addAttribute("comments", commentService.getComments(imageId));
-
-        //Check if the user logged in is same as the one who uploaded the image
-        //Allow edit or delete of the image only if they are the same
-        loggedUser = (User) session.getAttribute("loggeduser");
-
-        if (loggedUser.getUsername().equals(image.getUser().getUsername()) == false) {
-            //Logged in user different from the one who uploaded the image
-            //Do not all them to either edit or delete the image
-            model.addAttribute("editError", editError);
-            model.addAttribute("deleteError", deleteError);
-        }
+        // Prepare the model with all details to render
+        prepareImageView(imageId, model, session);
         return "images/image";
     }
 
@@ -122,8 +100,11 @@ public class ImageController {
         // Additional protection. If someone attempts to edit inspite of the warning, do not allow
         loggedUser = (User) session.getAttribute("loggeduser");
         if (loggedUser.getUsername().equals(image.getUser().getUsername()) == false) {
-            return "redirect:/images/" + image.getId() + "/" + image.getTitle();
+            // User does not have the permission, render the same 'image' page
+            prepareImageView(imageId, model, session);
+            return "/images/image";
         }
+        // Has the required permission, allow to edit the image
         String tags = convertTagsToString(image.getTags());
         model.addAttribute("image", image);
         model.addAttribute("tags", tags);
@@ -169,19 +150,48 @@ public class ImageController {
     //The method calls the deleteImage() method in the business logic passing the id of the image to be deleted
     //Looks for a controller method with request mapping of type '/images'
     @RequestMapping(value = "/deleteImage", method = RequestMethod.DELETE)
-    public String deleteImageSubmit(@RequestParam(name = "imageId") Integer imageId, HttpSession session) {
+    public String deleteImageSubmit(@RequestParam(name = "imageId") Integer imageId, Model model,
+                                    HttpSession session) {
         User loggedUser;
         Image image = imageService.getImage(imageId);
 
         // Additional protection. If someone attempts to delete inspite of the warning, do not allow
         loggedUser = (User) session.getAttribute("loggeduser");
         if (loggedUser.getUsername().equals(image.getUser().getUsername()) == false) {
-            return "redirect:/images/" + image.getId() + "/" + image.getTitle();
+            // User does not have the permission, render the same 'image' page
+            prepareImageView(imageId, model, session);
+            return "/images/image";
         }
+        // Has the required permission, allow to delete the image
         imageService.deleteImage(imageId);
         return "redirect:/images";
     }
 
+    //The logic is to get the image from the databse with corresponding Image ID.
+    // After getting the image from the database the other details like comments and tags are added
+    //Add the image in the Model type object with 'image' as the key
+    public void prepareImageView(Integer imageId, Model model, HttpSession session) {
+        User loggedUser;
+        String editError = "Only the owner of the image can edit the image";
+        String deleteError = "Only the owner of the image can delete the image";
+
+        Image image = imageService.getImage(imageId);
+        model.addAttribute("image", image);
+        model.addAttribute("tags", image.getTags());
+        //Display all the comments for the Image
+        model.addAttribute("comments", commentService.getComments(imageId));
+
+        //Check if the user logged in is same as the one who uploaded the image
+        //Allow edit or delete of the image only if they are the same
+        loggedUser = (User) session.getAttribute("loggeduser");
+
+        if (loggedUser.getUsername().equals(image.getUser().getUsername()) == false) {
+            //Logged in user different from the one who uploaded the image
+            //Do not allow  them to either edit or delete the image
+            model.addAttribute("editError", editError);
+            model.addAttribute("deleteError", deleteError);
+        }
+    }
 
     //This method converts the image to Base64 format
     private String convertUploadedFileToBase64(MultipartFile file) throws IOException {
